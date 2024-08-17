@@ -50,20 +50,27 @@ const MetaMask = () => {
 
   const connectMetaMask = async () => {
     setIsLoading(true);
-    await MetaMaskService.connectAllAccounts()
-      .then(async (res) => {
-        if (res.length > 0) setMetaAccount(res[0]);
+    try {
+      const res = await MetaMaskService.connectAllAccounts();
+      if (res.length > 0) {
+        setMetaAccount(res[0]);
         setTransData({ ...transData, fromAccId: res[0] });
-        await MetaMaskService.getAccountBalance(res[0]).then(async (balRes) => {
+
+        try {
+          const balRes = await MetaMaskService.getAccountBalance(res[0]);
           setMetaBalance(convertWeiToEth(balRes));
           await addMetamaskDataToDb({ accountId: res[0], balance: balRes });
-        });
-        setIsLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setIsLoading(false);
-      });
+        } catch (balanceError) {
+          console.error("Error getting account balance:", balanceError);
+          setError("Failed to retrieve account balance.");
+        }
+      }
+    } catch (err) {
+      console.error("connect err->", err);
+      setError("An error occurred while connecting to MetaMask.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const metaMaskLogin = () => (
